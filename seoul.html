@@ -2,10 +2,10 @@
 <html lang="bg">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
   <title>Seoul Map — Tokyo-style Filters</title>
 
-  <!-- Same library stack as before -->
+  <!-- Library stack -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.css"/>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.js"></script>
   <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
@@ -22,16 +22,19 @@
     /* Keep popups above the side panel */
     .leaflet-pane.leaflet-popup-pane { z-index: 3000 !important; }
 
-    /* Side panel */
+    /* Side panel (fixed for iOS reliability) */
     #sidePanel{
-      position:absolute; left:10px; top:10px; z-index:1200;
+      position:fixed; left:10px; top:10px; z-index:1200;
       width:300px; max-width:90vw; background:#fff; border-radius:12px;
       border:1px solid #e8e8e8; box-shadow:0 6px 24px rgba(0,0,0,.18);
       overflow:hidden; transition: top .18s ease, width .18s ease, border-radius .18s ease;
+      touch-action: manipulation;
     }
     #panelHeader{
-      background:#111; color:#fff; padding:8px 10px; cursor:pointer;
+      background:#111; color:#fff; padding:10px 12px; cursor:pointer;
       display:flex; align-items:center; justify-content:space-between;
+      -webkit-tap-highlight-color: transparent;
+      user-select:none; -webkit-user-select:none;
     }
     #panelHeader .title{ display:flex; align-items:center; gap:8px; }
     #panelHeader h4{ margin:0; font-size:15px; font-weight:600; }
@@ -45,20 +48,20 @@
     #panelFooter button.ghost{ background:#fff; color:#111; border:1px solid #ddd; }
 
     /* Category list like Tokyo */
-    .cat-heading{ font-weight:700; margin:0 0 6px; font-size:16px; }
     .cat-list{ list-style:none; padding:0; margin:0; }
     .cat-list li{ display:flex; align-items:center; gap:8px; margin:6px 0; }
     .cat-list .emoji{ width:20px; text-align:center; }
-    .cat-list label{ font-weight:400; margin:0; cursor:pointer; }
     .legend-box{ margin-top:8px; font-size:12px; color:#444; }
-    .legend-box b{ font-weight:700; }
     .legend-dot{ display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 4px; vertical-align:middle; }
     .legend-gold{ background:linear-gradient(180deg,#ffdc73,#e2a500); border:1px solid #c89200; }
     .legend-blue{ background:#3388ff; border:1px solid #1d5fcc; }
     .legend-green{ background:#43a047; border:1px solid #2e7d32; }
 
-    /* Collapsed (icon-only, moved lower to avoid map controls) */
-    #sidePanel.collapsed{ width:52px; border-radius:12px; top:74px; }
+    /* Collapsed (icon-only, lower so it doesn't block map controls) */
+    #sidePanel.collapsed{
+      width:52px; border-radius:12px;
+      top:calc(74px + env(safe-area-inset-top));
+    }
     #sidePanel.collapsed #panelBody,
     #sidePanel.collapsed #panelFooter,
     #sidePanel.collapsed #panelHeader .title { display:none !important; }
@@ -66,23 +69,42 @@
 
     /* Popup visuals */
     .leaflet-popup-content{ margin:8px 12px; }
-    .popup-img{ width:100%; height:auto; border-radius:8px; margin-bottom:6px; }
-    .tab-content{ margin-top:6px; }
-    .gm-actions a{ margin-right:8px; }
+    .popup-img{ width:100%; height:auto; border-radius:8px; margin-bottom:6px; object-fit:cover; }
 
-    @media (max-width:560px){
-      #sidePanel{ width:52px; top:74px; }
-      #panelBody, #panelFooter, #panelHeader .title{ display:none; }
-      #panelHeader .mini{ display:inline-block; }
+    /* --- Small screens / portrait (iPhone-safe) --- */
+    @media (max-width:820px){
+      /* Respect notch / toolbars on iPhone */
+      #sidePanel{ width:86vw; top:calc(84px + env(safe-area-inset-top)); }
+      #sidePanel.collapsed{ width:52px; }
+
+      /* Popups: full-bleed-ish width and tall but scrollable */
+      .leaflet-popup,
+      .leaflet-popup-content-wrapper{
+        max-width: 94vw !important;
+        width: 94vw !important;
+        border-radius:12px;
+      }
+      .leaflet-popup-content{
+        max-height: calc(80vh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+        overflow:auto;
+        -webkit-overflow-scrolling:touch;
+      }
+      .nav.nav-tabs>li>a { padding:6px 8px; font-size:12px; }
+    }
+
+    /* iOS specific tweaks */
+    @supports (-webkit-touch-callout: none){
+      #panelHeader{ padding:12px; }
+      .leaflet-popup-content{ -webkit-overflow-scrolling:touch; }
     }
   </style>
 </head>
 <body>
 <div id="map"></div>
 
-<!-- TOKYO-style filter panel -->
+<!-- Filter panel -->
 <div id="sidePanel">
-  <div id="panelHeader" title="Скрий/покажи филтрите">
+  <div id="panelHeader" title="Скрий/покажи филтрите" role="button" aria-expanded="true">
     <div class="title">
       <span class="glyphicon glyphicon-filter" aria-hidden="true"></span>
       <h4>Филтър по категории</h4>
@@ -138,14 +160,13 @@
   const HOTEL = { name:"Your Hotel (23-1 Eulji-ro 19-gil, Jung-gu)", lat:37.569243, lng:126.995227, category:'hotel' };
   let currentLoc = null, currentDot = null;
 
-  // Robust Commons redirect (works for any exact filename)
   function commons(file){ return 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(file) + '?width=640'; }
-
   function gmDirections(origin, lat, lng, mode){
     return 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(origin) +
            '&destination=' + encodeURIComponent(lat+','+lng) + '&travelmode=' + mode;
   }
   function slug(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
+  function isSmall(){ return window.innerWidth <= 820; }
 
   // --- DATA (Top 10 = gold) ---
   const top10 = [
@@ -162,7 +183,7 @@
      photoIdeas:["Ханок покриви в златен час","Алейни гледки към хълмовете","Детайли с ханджи и дърворезба"],
      imgIdeas:["Bukchon hanok golden hour","Bukchon alley view","Hanok details hanji"]},
     {title:"Changdeokgung & Secret Garden (Huwon)", lat:37.5794, lng:126.9910, category:"palace", top:true,
-     img:commons("Korea-Seoul-Changdeokgung-31.jpg"),  <!-- ✅ fixed -->
+     img:commons("Korea-Seoul-Changdeokgung-31.jpg"),
      wiki:"https://en.wikipedia.org/wiki/Changdeokgung",
      info_bg:"Чандокгун (1405) – любим дворец на много владетели; от 1997 г. в ЮНЕСКО заради хармонията с релефа. Хувон („Скритата градина“) разполага с езерото Буйонгджи, павилиона Джухамну (1776) и стотици вековни дървета; посещава се с резервация.",
      official:"https://eng.cdg.go.kr/",
@@ -175,7 +196,7 @@
      photoIdeas:["Калиграфи и печати ‘dojang’","Ханок чайни","Улични артисти уикенд"],
      imgIdeas:["Insadong calligraphy","Insadong teahouse","Insadong street performance"]},
     {title:"N Seoul Tower (Namsan)", lat:37.5512, lng:126.9882, category:"view", top:true,
-     img:commons("Seoul_Tower_from_Namsan_Park_(9595148285).jpg"),  <!-- ✅ fixed -->
+     img:commons("Seoul_Tower_from_Namsan_Park_(9595148285).jpg"),
      wiki:"https://en.wikipedia.org/wiki/N_Seoul_Tower",
      info_bg:"Радио/ТВ кула (1971) на връх Намсан; обсерватории, въртящ се ресторант и „Locks of Love“. Най-добро време – по залез; до базата: въжена линия/автобус/пеша.",
      official:"https://www.seoultower.co.kr/eng/",
@@ -206,7 +227,7 @@
      photoIdeas:["Нощни изпълнители","Графити/арт стени","Инди кафенета"],
      imgIdeas:["Hongdae street performance","Hongdae murals","Hongdae indie cafe"]},
     {title:"Lotte World Tower (Seoul Sky)", lat:37.5131, lng:127.1028, category:"view", top:true,
-     img:commons("Lotte_World_Tower_In_Jamsil_(144738473).jpeg"),  <!-- ✅ fixed -->
+     img:commons("Lotte_World_Tower_In_Jamsil_(144738473).jpeg"),
      wiki:"https://en.wikipedia.org/wiki/Lotte_World_Tower",
      info_bg:"Най-високата сграда в Корея (555 м, 123 ет.; открита 2017). Обсерватория Seoul Sky (ет. 117–123) със стъклен под и тераса.",
      official:"https://www.lwt.co.kr/",
@@ -214,7 +235,7 @@
      imgIdeas:["Seoul Sky glass floor","Seokchon Lake reflection tower","Seoul skyline from Lotte Tower"]}
   ];
 
-  // Others (unchanged)
+  // Others
   const others = [
     {title:"Jogyesa Temple", lat:37.5730, lng:126.9823, category:"temple", top:false,
      img:commons("Seoul-Buddhist.temple-Jogyesa-01.jpg"), wiki:"https://en.wikipedia.org/wiki/Jogyesa",
@@ -244,7 +265,7 @@
      img:commons("Itaewon-ro_in_2019.jpg"), wiki:"https://en.wikipedia.org/wiki/Itaewon",
      info_bg:"Международен квартал с кухни от цял свят и динамичен нощен живот; следвайте указанията за безопасност в пикови периоди.",
      official:"https://english.visitseoul.net/attractions/Itaewon_/1709",
-     photoIdeas:["Улични табели на различни езици","Гледки към Намсан","Барове и ресторанти вечер"],
+     photoIdeas:["Улични табели на различни езици","Гледки към Namsan","Барове и ресторанти вечер"],
      imgIdeas:["Itaewon international signs","Itaewon night street","Itaewon Namsan view"]},
     {title:"Cheonggyecheon Stream", lat:37.5696, lng:126.9780, category:"park", top:false,
      img:commons("Cheonggyecheon_20181125_174338.jpg"), wiki:"https://en.wikipedia.org/wiki/Cheonggyecheon",
@@ -322,17 +343,26 @@
 
   // --- Markers ---
   const markers = [];
+  const POPUP_MAX = Math.min(420, Math.max(280, Math.round(window.innerWidth * 0.94)));
 
   // Hotel marker
   const hotelMarker = L.marker([HOTEL.lat, HOTEL.lng], {icon:hotelIcon}).addTo(map)
-    .bindPopup("<b>"+HOTEL.name+"</b><br>Central Jung District location—walkable to Myeongdong and Insadong.");
+    .bindPopup("<b>"+HOTEL.name+"</b><br>Central Jung District location—walkable to Myeongdong and Insadong.", {maxWidth:POPUP_MAX});
   hotelMarker._category = 'hotel';
   hotelMarker._isTop = false;
   markers.push(hotelMarker);
 
   function addSpot(p){
     const icon = p.top ? goldIcon : blueIcon;
-    const m = L.marker([p.lat, p.lng], {icon}).addTo(map).bindPopup(popupHTML(p), {maxWidth:420});
+    const m = L.marker([p.lat, p.lng], {icon}).addTo(map).bindPopup(
+      popupHTML(p),
+      {
+        maxWidth: POPUP_MAX,
+        autoPan: true,
+        autoPanPaddingTopLeft: [isSmall() ? 78 : 80, 100],
+        autoPanPaddingBottomRight: [20, 20]
+      }
+    );
     m._category = p.category; m._isTop = !!p.top;
     markers.push(m);
   }
@@ -369,25 +399,48 @@
   });
   document.getElementById('btnFit').addEventListener('click', fitAllVisible);
 
-  // Collapse / expand
+  // Collapse / expand (single, debounced handler for iOS)
   function setCollapsed(coll){
     const panel = document.getElementById('sidePanel');
     if(coll){
       panel.classList.add('collapsed');
-      $('#collapseIcon').removeClass('glyphicon-menu-up').addClass('glyphicon-menu-down');
+      document.getElementById('collapseIcon').classList.remove('glyphicon-menu-up');
+      document.getElementById('collapseIcon').classList.add('glyphicon-menu-down');
+      document.getElementById('panelHeader').setAttribute('aria-expanded','false');
     }else{
       panel.classList.remove('collapsed');
-      $('#collapseIcon').removeClass('glyphicon-menu-down').addClass('glyphicon-menu-up');
-      panel.style.top = '10px';
+      document.getElementById('collapseIcon').classList.remove('glyphicon-menu-down');
+      document.getElementById('collapseIcon').classList.add('glyphicon-menu-up');
+      document.getElementById('panelHeader').setAttribute('aria-expanded','true');
+      panel.style.top = (isSmall() ? 'calc(84px + env(safe-area-inset-top))' : '10px');
     }
   }
-  if(window.matchMedia && window.matchMedia('(max-width:560px)').matches){ setCollapsed(true); }
-  $('#panelHeader').on('click', function(){
-    const isCollapsed = document.getElementById('sidePanel').classList.contains('collapsed');
-    setCollapsed(!isCollapsed);
+  if(isSmall()){ setCollapsed(true); }
+
+  (function attachPanelToggle(){
+    var lastToggle = 0;
+    function toggleOnce(){
+      var now = Date.now();
+      if(now - lastToggle < 250) return; // debounce to kill double-fire on iOS
+      lastToggle = now;
+      const isCollapsed = document.getElementById('sidePanel').classList.contains('collapsed');
+      setCollapsed(!isCollapsed);
+    }
+    var hdr = document.getElementById('panelHeader');
+    if(window.PointerEvent){
+      hdr.addEventListener('pointerup', toggleOnce, {passive:true});
+    }else{
+      hdr.addEventListener('touchend', toggleOnce, {passive:true});
+      hdr.addEventListener('click', toggleOnce, {passive:true});
+    }
+  })();
+
+  // Re-apply on resize (e.g., rotate)
+  window.addEventListener('resize', function(){
+    if(isSmall()){ setCollapsed(true); } else { setCollapsed(false); }
   });
 
-  // Geolocation + dynamic nav links (single declaration of currentDot kept at top)
+  // Geolocation + dynamic nav links
   function ensureCurrentLocation(cb){
     if(currentLoc){ cb(currentLoc); return; }
     if(!navigator.geolocation){ alert('Geolocation не се поддържа от този браузър.'); return; }
@@ -400,26 +453,35 @@
     }, function(err){ alert('Неуспешно засичане на локацията: ' + err.message); }, {enableHighAccuracy:true, timeout:8000, maximumAge:0});
   }
 
-  $('#btnLocate').on('click', function(){
+  document.getElementById('btnLocate').addEventListener('click', function(){
     ensureCurrentLocation(function(loc){
       map.setView([loc.lat, loc.lng], Math.max(map.getZoom(), 14));
       if(currentDot) currentDot.openPopup();
     });
   });
 
+  // Keep popups clear of the side panel on small screens
   map.on('popupopen', function(e){
-    const container = e.popup.getElement();
-    if(!container) return;
-    $(container).find('.dir-cur').off('click').on('click', function(ev){
-      ev.preventDefault();
-      const mode = this.getAttribute('data-mode');
-      const lat = this.getAttribute('data-lat');
-      const lng = this.getAttribute('data-lng');
-      ensureCurrentLocation(function(loc){
-        const href = gmDirections(loc.lat+','+loc.lng, lat, lng, mode);
-        window.open(href, '_blank');
+    const el = e.popup.getElement();
+    if(el){
+      $(el).find('.dir-cur').off('click').on('click', function(ev){
+        ev.preventDefault();
+        const mode = this.getAttribute('data-mode');
+        const lat = this.getAttribute('data-lat');
+        const lng = this.getAttribute('data-lng');
+        ensureCurrentLocation(function(loc){
+          const href = gmDirections(loc.lat+','+loc.lng, lat, lng, mode);
+          window.open(href, '_blank');
+        });
       });
-    });
+    }
+    if(isSmall()){
+      const panel = document.getElementById('sidePanel');
+      if(!panel.classList.contains('collapsed')){
+        const shift = Math.round(panel.offsetWidth * 0.5);
+        map.panBy([shift, 0], {animate:true});
+      }
+    }
   });
 </script>
 </body>
