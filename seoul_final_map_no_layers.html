@@ -1,488 +1,426 @@
 <!DOCTYPE html>
-<html>
+<html lang="bg">
 <head>
-    
-    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
-    
-        <script>
-            L_NO_TOUCH = false;
-            L_DISABLE_3D = false;
-        </script>
-    
-    <style>html, body {width: 100%;height: 100%;margin: 0;padding: 0;}</style>
-    <style>#map {position:absolute;top:0;bottom:0;right:0;left:0;}</style>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.js"></script>
-    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.css"/>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css"/>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.6.3/css/font-awesome.min.css"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
-    
-            <meta name="viewport" content="width=device-width,
-                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-            <style>
-                #map_11746b04905c5c92ebadbfd1145f2ffb {
-                    position: relative;
-                    width: 100.0%;
-                    height: 100.0%;
-                    left: 0.0%;
-                    top: 0.0%;
-                }
-            </style>
-        
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Seoul Map — Tokyo-style Filters</title>
+
+  <!-- Same library stack as before -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.6.0/dist/leaflet.js"></script>
+  <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css"/>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+
+  <style>
+    html, body {height:100%; margin:0;}
+    #map {position:absolute; inset:0;}
+
+    /* Keep popups above the side panel */
+    .leaflet-pane.leaflet-popup-pane { z-index: 3000 !important; }
+
+    /* Side panel */
+    #sidePanel{
+      position:absolute; left:10px; top:10px; z-index:1200;
+      width:300px; max-width:90vw; background:#fff; border-radius:12px;
+      border:1px solid #e8e8e8; box-shadow:0 6px 24px rgba(0,0,0,.18);
+      overflow:hidden; transition: top .18s ease, width .18s ease, border-radius .18s ease;
+    }
+    #panelHeader{
+      background:#111; color:#fff; padding:8px 10px; cursor:pointer;
+      display:flex; align-items:center; justify-content:space-between;
+    }
+    #panelHeader .title{ display:flex; align-items:center; gap:8px; }
+    #panelHeader h4{ margin:0; font-size:15px; font-weight:600; }
+    #panelHeader .mini{ display:none; }
+
+    #panelBody{ padding:10px 12px; }
+    #panelFooter{ padding:10px 12px; border-top:1px solid #eee; display:flex; gap:6px; flex-wrap:wrap; }
+
+    #panelFooter button{ border:0; border-radius:8px; padding:6px 10px; background:#111; color:#fff; }
+    #panelFooter button.alt{ background:#666; }
+    #panelFooter button.ghost{ background:#fff; color:#111; border:1px solid #ddd; }
+
+    /* Category list like Tokyo */
+    .cat-heading{ font-weight:700; margin:0 0 6px; font-size:16px; }
+    .cat-list{ list-style:none; padding:0; margin:0; }
+    .cat-list li{ display:flex; align-items:center; gap:8px; margin:6px 0; }
+    .cat-list .emoji{ width:20px; text-align:center; }
+    .cat-list label{ font-weight:400; margin:0; cursor:pointer; }
+    .legend-box{ margin-top:8px; font-size:12px; color:#444; }
+    .legend-box b{ font-weight:700; }
+    .legend-dot{ display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 4px; vertical-align:middle; }
+    .legend-gold{ background:linear-gradient(180deg,#ffdc73,#e2a500); border:1px solid #c89200; }
+    .legend-blue{ background:#3388ff; border:1px solid #1d5fcc; }
+    .legend-green{ background:#43a047; border:1px solid #2e7d32; }
+
+    /* Collapsed (icon-only, moved lower to avoid map controls) */
+    #sidePanel.collapsed{ width:52px; border-radius:12px; top:74px; }
+    #sidePanel.collapsed #panelBody,
+    #sidePanel.collapsed #panelFooter,
+    #sidePanel.collapsed #panelHeader .title { display:none !important; }
+    #sidePanel.collapsed #panelHeader .mini { display:inline-block; }
+
+    /* Popup visuals */
+    .leaflet-popup-content{ margin:8px 12px; }
+    .popup-img{ width:100%; height:auto; border-radius:8px; margin-bottom:6px; }
+    .tab-content{ margin-top:6px; }
+    .gm-actions a{ margin-right:8px; }
+
+    @media (max-width:560px){
+      #sidePanel{ width:52px; top:74px; }
+      #panelBody, #panelFooter, #panelHeader .title{ display:none; }
+      #panelHeader .mini{ display:inline-block; }
+    }
+  </style>
 </head>
 <body>
-    
-    
-            <div class="folium-map" id="map_11746b04905c5c92ebadbfd1145f2ffb" ></div>
-        
-</body>
+<div id="map"></div>
+
+<!-- TOKYO-style filter panel -->
+<div id="sidePanel">
+  <div id="panelHeader" title="Скрий/покажи филтрите">
+    <div class="title">
+      <span class="glyphicon glyphicon-filter" aria-hidden="true"></span>
+      <h4>Филтър по категории</h4>
+    </div>
+    <span class="mini glyphicon glyphicon-filter" aria-hidden="true" title="Филтри"></span>
+    <span class="glyphicon glyphicon-menu-up" id="collapseIcon" aria-hidden="true" title="Скрий"></span>
+  </div>
+
+  <div id="panelBody">
+    <ul class="cat-list">
+      <li><span class="emoji">🛕</span><label><input type="checkbox" class="catFilter" value="temple" checked> Храмове/Светилища</label></li>
+      <li><span class="emoji">🗼</span><label><input type="checkbox" class="catFilter" value="view" checked> Ландмарки/Обсерватории</label></li>
+      <li><span class="emoji">🌳</span><label><input type="checkbox" class="catFilter" value="park" checked> Градини/Паркове</label></li>
+      <li><span class="emoji">🧆</span><label><input type="checkbox" class="catFilter" value="market" checked> Пазари/Храна</label></li>
+      <li><span class="emoji">🏙️</span><label><input type="checkbox" class="catFilter" value="district" checked> Квартали</label></li>
+      <li><span class="emoji">🖼️</span><label><input type="checkbox" class="catFilter" value="museum" checked> Музеи/Изкуство</label></li>
+      <li><span class="emoji">🏰</span><label><input type="checkbox" class="catFilter" value="palace" checked> Дворци/Наследство</label></li>
+      <li><span class="emoji">🏨</span><label><input type="checkbox" class="catFilter" value="hotel" checked> Хотели</label></li>
+      <li><span class="emoji">✚</span><label><input type="checkbox" class="catFilter" value="other" checked> Друго</label></li>
+    </ul>
+
+    <div style="margin-top:10px;">
+      <label><input type="checkbox" id="onlyTop"> Само Топ 10</label>
+    </div>
+
+    <div class="legend-box">
+      <p><b>•</b> <span class="legend-dot legend-gold"></span> Златен пин = Топ 10 Сеул</p>
+      <p><b>•</b> <span class="legend-dot legend-blue"></span> Син пин = други места</p>
+      <p><b>•</b> <span class="legend-dot legend-green"></span> Зелен пин = хотел</p>
+    </div>
+  </div>
+
+  <div id="panelFooter">
+    <button id="btnLocate" title="Покажи текущата ми локация">Намери ме</button>
+    <button class="alt" id="btnFit" title="Побери всички маркери">Побери всички</button>
+    <button class="ghost" id="btnReset" title="Нулирай филтрите">Нулирай</button>
+  </div>
+</div>
+
 <script>
-    
-    
-            var map_11746b04905c5c92ebadbfd1145f2ffb = L.map(
-                "map_11746b04905c5c92ebadbfd1145f2ffb",
-                {
-                    center: [37.5665, 126.978],
-                    crs: L.CRS.EPSG3857,
-                    zoom: 12,
-                    zoomControl: true,
-                    preferCanvas: false,
-                }
-            );
+  // Base map
+  var map = L.map('map', { center:[37.5665,126.978], zoom:12, zoomControl:true, preferCanvas:false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'Data © <a href="http://openstreetmap.org">OpenStreetMap</a> (ODbL)', maxZoom:19
+  }).addTo(map);
 
-            
+  // Icons
+  const goldIcon  = L.AwesomeMarkers.icon({icon:'star', prefix:'glyphicon', markerColor:'orange', iconColor:'#fff'});
+  const blueIcon  = L.AwesomeMarkers.icon({icon:'info-sign', prefix:'glyphicon', markerColor:'blue',   iconColor:'#fff'});
+  const hotelIcon = L.AwesomeMarkers.icon({icon:'home',     prefix:'glyphicon', markerColor:'green',  iconColor:'#fff'});
 
-        
-    
-            var tile_layer_f5088bb34ee47822480717b947ece51f = L.tileLayer(
-                "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                {"attribution": "Data by \u0026copy; \u003ca href=\"http://openstreetmap.org\"\u003eOpenStreetMap\u003c/a\u003e, under \u003ca href=\"http://www.openstreetmap.org/copyright\"\u003eODbL\u003c/a\u003e.", "detectRetina": false, "maxNativeZoom": 18, "maxZoom": 18, "minZoom": 0, "noWrap": false, "opacity": 1, "subdomains": "abc", "tms": false}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var marker_4296d27d2c96dd4b09aaee85cd6b2406 = L.marker(
-                [37.569243, 126.995227],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_0113e7484e12c43575afa10dc3eee816 = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "home", "iconColor": "white", "markerColor": "green", "prefix": "glyphicon"}
-            );
-            marker_4296d27d2c96dd4b09aaee85cd6b2406.setIcon(icon_0113e7484e12c43575afa10dc3eee816);
-        
-    
-        var popup_830c65b8aca50a0577f38d8dda064cdc = L.popup({"maxWidth": "100%"});
+  // Utils
+  const HOTEL = { name:"Your Hotel (23-1 Eulji-ro 19-gil, Jung-gu)", lat:37.569243, lng:126.995227, category:'hotel' };
+  let currentLoc = null, currentDot = null;
 
-        
-            var html_5ba4b6e723ca93a667ede35184329deb = $(`<div id="html_5ba4b6e723ca93a667ede35184329deb" style="width: 100.0%; height: 100.0%;"><b>Your Hotel (23-1 Eulji-ro 19-gil, Jung-gu)</b><br>Central Jung District location—walkable to Myeongdong and Insadong.</div>`)[0];
-            popup_830c65b8aca50a0577f38d8dda064cdc.setContent(html_5ba4b6e723ca93a667ede35184329deb);
-        
+  // Robust Commons redirect (works for any exact filename)
+  function commons(file){ return 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(file) + '?width=640'; }
 
-        marker_4296d27d2c96dd4b09aaee85cd6b2406.bindPopup(popup_830c65b8aca50a0577f38d8dda064cdc)
-        ;
+  function gmDirections(origin, lat, lng, mode){
+    return 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(origin) +
+           '&destination=' + encodeURIComponent(lat+','+lng) + '&travelmode=' + mode;
+  }
+  function slug(s){ return s.toLowerCase().replace(/[^a-z0-9]+/g,'-'); }
 
-        
-    
-    
-            var marker_bff786b71480ea17d1042edc5eecd952 = L.marker(
-                [37.5796, 126.977],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_c63b0243ebef4550228388e97e9d0df5 = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "blue", "prefix": "glyphicon"}
-            );
-            marker_bff786b71480ea17d1042edc5eecd952.setIcon(icon_c63b0243ebef4550228388e97e9d0df5);
-        
-    
-        var popup_d05d876d9f014b6fee0d1334ee2012a1 = L.popup({"maxWidth": 400});
+  // --- DATA (Top 10 = gold) ---
+  const top10 = [
+    {title:"Gyeongbokgung Palace", lat:37.5796, lng:126.9770, category:"palace", top:true,
+     img:commons("Gyeonghoeru_Pavilion_in_Gyeongbokgung_Palace.jpg"), wiki:"https://en.wikipedia.org/wiki/Gyeongbokgung",
+     info_bg:"Издигнат през 1395 г. като първи и „главен“ дворец на династия Чосон. Опожарен при Имджинската война (1592), възстановяван от 1865 г.; масови разрушения по време на японската окупация. Днес се реставрира към вида от 1888 г. Главната порта Гуанхвамун е реставрирана през 2010 г., а каменната й тераса – 2023 г. Не пропускайте смяната на караула и Националния фолклорен музей.",
+     official:"https://www.royalpalace.go.kr/",
+     photoIdeas:["Гуангхвамун и церемонията на караула","Езерца и отражения в павилионите","Нощни осветени дворове"],
+     imgIdeas:["Gyeongbokgung guards ceremony","Gyeongbokgung night illumination","Gyeongbokgung pavilion reflection"]},
+    {title:"Bukchon Hanok Village", lat:37.5826, lng:126.9830, category:"district", top:true,
+     img:commons("Bukchon_Hanok_Village_01.jpg"), wiki:"https://en.wikipedia.org/wiki/Bukchon_Hanok_Village",
+     info_bg:"Исторически квартал с ~900 ханок къщи между Гьонбокгун и Чандокгун (късен XIX–ранен XX в.). Поради свръхтуризъм се препоръчват дневни часови пояси и тишина – районът е жилищен; очаквайте работилници, чайни и панорамни улички.",
+     official:"https://hanok.seoul.go.kr/",
+     photoIdeas:["Ханок покриви в златен час","Алейни гледки към хълмовете","Детайли с ханджи и дърворезба"],
+     imgIdeas:["Bukchon hanok golden hour","Bukchon alley view","Hanok details hanji"]},
+    {title:"Changdeokgung & Secret Garden (Huwon)", lat:37.5794, lng:126.9910, category:"palace", top:true,
+     img:commons("Korea-Seoul-Changdeokgung-31.jpg"),  <!-- ✅ fixed -->
+     wiki:"https://en.wikipedia.org/wiki/Changdeokgung",
+     info_bg:"Чандокгун (1405) – любим дворец на много владетели; от 1997 г. в ЮНЕСКО заради хармонията с релефа. Хувон („Скритата градина“) разполага с езерото Буйонгджи, павилиона Джухамну (1776) и стотици вековни дървета; посещава се с резервация.",
+     official:"https://eng.cdg.go.kr/",
+     photoIdeas:["Лотоси при Буйонгджи","Павилиони сред есенни кленове","Джухамну и библиотеката на хълма"],
+     imgIdeas:["Changdeokgung Huwon autumn","Buyongji lotus pavilion","Juhamnu secret garden"]},
+    {title:"Insa-dong", lat:37.5740, lng:126.9849, category:"district", top:true,
+     img:commons("Insa-dong_%28%EC%9D%B8%EC%82%AC%EB%8F%99%29_-_panoramio.jpg"), wiki:"https://en.wikipedia.org/wiki/Insa-dong",
+     info_bg:"Улица Insadong-gil и алеите около нея – антики, калиграфия, галерии и традиционни чайни; уикендни улични изпълнения. Близо до Джогеса и дворцовата зона.",
+     official:"https://english.visitseoul.net/attractions/Insadong_/1708",
+     photoIdeas:["Калиграфи и печати ‘dojang’","Ханок чайни","Улични артисти уикенд"],
+     imgIdeas:["Insadong calligraphy","Insadong teahouse","Insadong street performance"]},
+    {title:"N Seoul Tower (Namsan)", lat:37.5512, lng:126.9882, category:"view", top:true,
+     img:commons("Seoul_Tower_from_Namsan_Park_(9595148285).jpg"),  <!-- ✅ fixed -->
+     wiki:"https://en.wikipedia.org/wiki/N_Seoul_Tower",
+     info_bg:"Радио/ТВ кула (1971) на връх Намсан; обсерватории, въртящ се ресторант и „Locks of Love“. Най-добро време – по залез; до базата: въжена линия/автобус/пеша.",
+     official:"https://www.seoultower.co.kr/eng/",
+     photoIdeas:["Нощни панорами на Сеул","Катинари на любовта","Кадри от въжената линия"],
+     imgIdeas:["N Seoul Tower night","Namsan love locks","Namsan cable car view"]},
+    {title:"Myeongdong", lat:37.5637, lng:126.9820, category:"district", top:true,
+     img:commons("Myeong-dong_street_by_night.JPG"), wiki:"https://en.wikipedia.org/wiki/Myeong-dong",
+     info_bg:"Емблематичен търговски квартал за мода и K-beauty с много улична храна вечер; катедрала Мьондон и шоуто NANTA наблизо.",
+     official:"https://english.visitseoul.net/attractions/Myeongdong_/1744",
+     photoIdeas:["Неонови улици вечер","Щандове с улична храна","Катедралата в син час"],
+     imgIdeas:["Myeongdong neon crowd","Myeongdong street food","Myeongdong Cathedral blue hour"]},
+    {title:"Dongdaemun Design Plaza (DDP)", lat:37.5663, lng:127.0095, category:"museum", top:true,
+     img:commons("Dongdaemun_Design_Plaza_at_night,_Seoul,_Korea.jpg"), wiki:"https://en.wikipedia.org/wiki/Dongdaemun_Design_Plaza",
+     info_bg:"Неофутуристичен комплекс на Заха Хадид (2014) – изложби, Седмица на модата, нощни пазари. Органични обеми от метални панели и „метонимична“ форма.",
+     official:"https://www.ddp.or.kr/",
+     photoIdeas:["Извивки на фасадата","Нощни LED инсталации","Минималистични кадри на панели"],
+     imgIdeas:["DDP curves architecture","Dongdaemun Design Plaza night","Zaha Hadid Seoul panels"]},
+    {title:"Gwangjang Market", lat:37.5702, lng:127.0017, category:"market", top:true,
+     img:commons("Gwangjang_Market.JPG"), wiki:"https://en.wikipedia.org/wiki/Gwangjang_Market",
+     info_bg:"Традиционен пазар (асоциация 1911) с хиляди щандове и десетки хиляди посетители/ден. Хитове: биндетеок, майяк кимбап, юкхве.",
+     official:"http://www.kwangjangmarket.co.kr/en/",
+     photoIdeas:["Плочи с биндетеок","Тесни алеи със знаци","Щандове с кимбап"],
+     imgIdeas:["Gwangjang bindaetteok","Gwangjang food alley","Mayak gimbap stall"]},
+    {title:"Hongdae (Hongik Univ. area)", lat:37.5572, lng:126.9236, category:"district", top:true,
+     img:commons("Hongdae_Streets.jpg"), wiki:"https://en.wikipedia.org/wiki/Hongdae_(area)",
+     info_bg:"Младежка сцена: улични изпълнения, клубове, арт пазари. Вечер улиците оживяват с танци и лайв музика.",
+     official:"https://english.visitseoul.net/attractions/Hongdae_/1719",
+     photoIdeas:["Нощни изпълнители","Графити/арт стени","Инди кафенета"],
+     imgIdeas:["Hongdae street performance","Hongdae murals","Hongdae indie cafe"]},
+    {title:"Lotte World Tower (Seoul Sky)", lat:37.5131, lng:127.1028, category:"view", top:true,
+     img:commons("Lotte_World_Tower_In_Jamsil_(144738473).jpeg"),  <!-- ✅ fixed -->
+     wiki:"https://en.wikipedia.org/wiki/Lotte_World_Tower",
+     info_bg:"Най-високата сграда в Корея (555 м, 123 ет.; открита 2017). Обсерватория Seoul Sky (ет. 117–123) със стъклен под и тераса.",
+     official:"https://www.lwt.co.kr/",
+     photoIdeas:["Стъкленият под на 118-и етаж","Отражение в езерото Сокчон","Нощна панорама от обсерваторията"],
+     imgIdeas:["Seoul Sky glass floor","Seokchon Lake reflection tower","Seoul skyline from Lotte Tower"]}
+  ];
 
-        
-            var html_e57a99de0ac79b67546eb3d32725f86c = $(`<div id="html_e57a99de0ac79b67546eb3d32725f86c" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>Gyeongbokgung Palace</b><br>       Built in 1395, it’s the largest of Seoul’s Five Grand Palaces and once the heart of the Joseon Dynasty.<br>       <i>≈ 2.0 km, 25 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5796%2C126.977&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5796%2C126.977&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5796%2C126.977&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           Дворецът Кьонбоккун (경복궁) е издигнат през 1395 г. като първия и основен дворец на династията Чосон. Комплексът е пострадал тежко по време на Имджинската война и японската окупация, но днес се възстановява към вида си от 1888 г. Главната порта Гуангхвамун е реставрирана окончателно през 2010 г. (вкл. каменната тераса през 2023 г.). Не пропускайте смяната на караула и Националния фолклорен музей в северния край.         </div>       </details>     </div>     </div>`)[0];
-            popup_d05d876d9f014b6fee0d1334ee2012a1.setContent(html_e57a99de0ac79b67546eb3d32725f86c);
-        
+  // Others (unchanged)
+  const others = [
+    {title:"Jogyesa Temple", lat:37.5730, lng:126.9823, category:"temple", top:false,
+     img:commons("Seoul-Buddhist.temple-Jogyesa-01.jpg"), wiki:"https://en.wikipedia.org/wiki/Jogyesa",
+     info_bg:"Главен храм на будисткия орден Чоге (корейски дзен). Празнично украсен с фенери около рождения ден на Буда; 500-годишно дърво на входа.",
+     official:"https://www.jogyesa.kr/",
+     photoIdeas:["Двор с цветни фенери","Главната зала Daeungjeon","Врати и детайли"],
+     imgIdeas:["Jogyesa lanterns","Jogyesa Daeungjeon","Jogyesa temple gate"]},
+    {title:"Dongdaemun Market", lat:37.5716, lng:127.0090, category:"market", top:false,
+     img:commons("Korea-Seoul-Dongdaemun_Market-01.jpg"), wiki:"https://en.wikipedia.org/wiki/Dongdaemun_Market",
+     info_bg:"Огромен търговски район (от 1905) – текстил, мода, нощно пазаруване в десетки молове и хиляди щандове.",
+     official:"https://english.visitseoul.net/shopping/Dongdaemun-Market_/2576",
+     photoIdeas:["Нощни витрини и табели","Платове и аксесоари","Улица Heunginjimun-ro"],
+     imgIdeas:["Dongdaemun market fabrics","Dongdaemun night shopping","Heunginjimun-ro lights"]},
+    {title:"COEX Mall & Starfield Library", lat:37.5126, lng:127.0586, category:"museum", top:false,
+     img:commons("Starfield_Library_COEX_20240218.jpg"), wiki:"https://en.wikipedia.org/wiki/Starfield_Coex_Mall",
+     info_bg:"Един от най-големите подземни молове в Азия; библиотека Starfield с 13-метрови рафтове и >50 000 книги – популярно фотомясто.",
+     official:"https://www.starfield.co.kr/coexlib/",
+     photoIdeas:["Високи рафтове от централния площад","Читатели пред ‘книжната стена’","Симетрични кадри от балюстрадата"],
+     imgIdeas:["Starfield Library COEX shelves","COEX library wide angle","Starfield Library balcony view"]},
+    {title:"Han River Park (Banpo Rainbow Fountain)", lat:37.5123, lng:126.9960, category:"park", top:false,
+     img:commons("Banpo_Moonlight_Rainbow_Fountain.jpg"), wiki:"https://en.wikipedia.org/wiki/Banpo_Bridge",
+     info_bg:"Шоуто ‘Moonlight Rainbow Fountain’ (април–октомври) по мост Банпо. Класика за пикник край р. Хан – най-добро вечер.",
+     official:"https://english.seoul.go.kr/banpo-bridge-moonlight-rainbow-fountain/",
+     photoIdeas:["Дълга експозиция на струите","Пикник на тревата с мост на фон","Светлинни отражения във водата"],
+     imgIdeas:["Banpo rainbow fountain long exposure","Banpo Hangang picnic night","Banpo bridge reflections"]},
+    {title:"Itaewon", lat:37.5345, lng:126.9946, category:"district", top:false,
+     img:commons("Itaewon-ro_in_2019.jpg"), wiki:"https://en.wikipedia.org/wiki/Itaewon",
+     info_bg:"Международен квартал с кухни от цял свят и динамичен нощен живот; следвайте указанията за безопасност в пикови периоди.",
+     official:"https://english.visitseoul.net/attractions/Itaewon_/1709",
+     photoIdeas:["Улични табели на различни езици","Гледки към Намсан","Барове и ресторанти вечер"],
+     imgIdeas:["Itaewon international signs","Itaewon night street","Itaewon Namsan view"]},
+    {title:"Cheonggyecheon Stream", lat:37.5696, lng:126.9780, category:"park", top:false,
+     img:commons("Cheonggyecheon_20181125_174338.jpg"), wiki:"https://en.wikipedia.org/wiki/Cheonggyecheon",
+     info_bg:"Възстановен 10.9-км градски поток (открит отново 2005) след премахване на надлез; нощни светлини, фестивали, водопади в западния край.",
+     official:"https://english.seoul.go.kr/policy-information/urban-planning/cheonggyecheon/",
+     photoIdeas:["Нощни мостове и светлини","Фестивал на фенерите","Стъпала и водопади в началото"],
+     imgIdeas:["Cheonggyecheon night lights","Cheonggyecheon lanterns","Cheonggyecheon stepping stones"]},
+    {title:"Gangnam Style Statue (COEX East Gate)", lat:37.508587, lng:127.040504, category:"view", top:false,
+     img:"https://c1.staticflickr.com/5/4546/38337382566_582a930577.jpg",
+     wiki:"https://en.wikipedia.org/wiki/Gangnam_Style#Legacy_and_public_impact",
+     info_bg:"Гигантска скулптура (2016) пред източния вход на COEX – ‘опа’ позата. Активира се с музика/LED ефекти при събития; популярна за снимки.",
+     official:"https://english.visitseoul.net/attractions/COEX-The-Place_/31496",
+     photoIdeas:["Симетрия под ‘ръцете’","Широкоъгълни кадри нощем","Композиция с COEX зад скулптурата"],
+     imgIdeas:["Gangnam Style Statue Seoul night","Gangnam hands COEX wide angle","Gangnam Style statue photo spots"]}
+  ];
 
-        marker_bff786b71480ea17d1042edc5eecd952.bindPopup(popup_d05d876d9f014b6fee0d1334ee2012a1)
-        ;
+  // --- Popup builder ---
+  function popupHTML(p){
+    const id = slug(p.title);
+    const pinterest = 'https://www.pinterest.com/search/pins/?q=' + encodeURIComponent(p.title + ' photography ideas');
+    const gis = 'https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(p.title + ' best photo spots');
+    const hotelOrigin = HOTEL.lat + ',' + HOTEL.lng;
 
-        
-    
-    
-            var marker_48fd0916911265707a6f4210c9515402 = L.marker(
-                [37.5826, 126.983],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_682079eff06d3431baf7c674f67ec67f = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "blue", "prefix": "glyphicon"}
-            );
-            marker_48fd0916911265707a6f4210c9515402.setIcon(icon_682079eff06d3431baf7c674f67ec67f);
-        
-    
-        var popup_a563a6055aae90e119b4b26e143e8a3a = L.popup({"maxWidth": 400});
+    function linksFrom(originLatLng){
+      return `
+        <a href="${gmDirections(originLatLng, p.lat, p.lng, 'transit')}" target="_blank">Transit</a> •
+        <a href="${gmDirections(originLatLng, p.lat, p.lng, 'walking')}" target="_blank">Walk</a> •
+        <a href="${gmDirections(originLatLng, p.lat, p.lng, 'driving')}" target="_blank">Drive</a>`;
+    }
 
-        
-            var html_b351b52e2d46ec5bfeb25749ee78c7f9 = $(`<div id="html_b351b52e2d46ec5bfeb25749ee78c7f9" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>Bukchon Hanok Village</b><br>       A neighborhood of traditional Korean houses (hanok), offering a glimpse into Seoul’s past amidst the modern city.<br>       <i>≈ 1.8 km, 23 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5826%2C126.983&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5826%2C126.983&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5826%2C126.983&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           Букчон Ханок Вилидж е исторически квартал с ~900 традиционни къщи ханок, разположен между дворците Кьонбокгун и Чандокгун. Улиците са тесни и обитавани – пазете тишина. От март 2025 г. в някои зони действа вечерен режим за туристи (около 17:00–10:00), въведен за ограничаване на свръхтуризма; спазвайте местните указания.         </div>       </details>     </div>     </div>`)[0];
-            popup_a563a6055aae90e119b4b26e143e8a3a.setContent(html_b351b52e2d46ec5bfeb25749ee78c7f9);
-        
+    return `
+    <div style="min-width:260px; max-width:380px">
+      <img class="popup-img" src="${p.img}" alt="${p.title}">
+      <h4 style="margin:4px 0 8px;">${p.title}${p.top? ' <span class="label label-warning">Top 10</span>':''}</h4>
 
-        marker_48fd0916911265707a6f4210c9515402.bindPopup(popup_a563a6055aae90e119b4b26e143e8a3a)
-        ;
+      <ul class="nav nav-tabs" role="tablist">
+        <li role="presentation" class="active"><a href="#info_${id}" aria-controls="info" role="tab" data-toggle="tab">Инфо</a></li>
+        <li role="presentation"><a href="#photos_${id}" aria-controls="photos" role="tab" data-toggle="tab">Фото идеи</a></li>
+        <li role="presentation"><a href="#nav_${id}" aria-controls="nav" role="tab" data-toggle="tab">Навигация</a></li>
+      </ul>
 
-        
-    
-    
-            var marker_480387d595c65d7ee39ed19cb9430710 = L.marker(
-                [37.574, 126.9849],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_96f1debcefa07fd6c1cb7cb47a3c16f9 = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "blue", "prefix": "glyphicon"}
-            );
-            marker_480387d595c65d7ee39ed19cb9430710.setIcon(icon_96f1debcefa07fd6c1cb7cb47a3c16f9);
-        
-    
-        var popup_ee0a52024771ea24a9a0dde8a2cdc692 = L.popup({"maxWidth": 400});
+      <div class="tab-content">
+        <div role="tabpanel" class="tab-pane active" id="info_${id}">
+          <div style="font-size:.95em; line-height:1.45">${p.info_bg}</div>
+          <div style="margin-top:8px;">
+            <a class="btn btn-xs btn-primary" href="${p.wiki}" target="_blank">Още информация (Wikipedia)</a>
+            ${p.official? `<a class="btn btn-xs btn-default" href="${p.official}" target="_blank">Официален сайт</a>`:''}
+          </div>
+        </div>
 
-        
-            var html_ab98ccbab7a90ba14a119489a38b72a3 = $(`<div id="html_ab98ccbab7a90ba14a119489a38b72a3" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>Insadong</b><br>       Known for antique shops, art galleries, and traditional tea houses—perfect for exploring Korean culture.<br>       <i>≈ 1.1 km, 13 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.574%2C126.9849&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.574%2C126.9849&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.574%2C126.9849&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           Инсадонг е пешеходна зона, известна с антикварни магазини, калиграфия и традиционни чайни. В страничните улички ще намерите ресторанти с домашна кухня и работилници за занаятчийски изделия. Най‑оживено е през уикендите, когато често има улични представления.         </div>       </details>     </div>     </div>`)[0];
-            popup_ee0a52024771ea24a9a0dde8a2cdc692.setContent(html_ab98ccbab7a90ba14a119489a38b72a3);
-        
+        <div role="tabpanel" class="tab-pane" id="photos_${id}">
+          <b>Идеи на място:</b>
+          <ul style="padding-left:18px; margin-top:4px;">${(p.photoIdeas||[]).map(x=>`<li>${x}</li>`).join('')}</ul>
+          <b>Търсене на изображения:</b>
+          <ul style="padding-left:18px; margin-top:4px;">${(p.imgIdeas||[]).map(x=>`<li>${x}</li>`).join('')}</ul>
+          <div style="margin-top:8px;">
+            <a class="btn btn-xs btn-primary" href="${pinterest}" target="_blank">Pinterest идеи</a>
+            <a class="btn btn-xs btn-default" href="${gis}" target="_blank">Google Images търсене</a>
+          </div>
+        </div>
 
-        marker_480387d595c65d7ee39ed19cb9430710.bindPopup(popup_ee0a52024771ea24a9a0dde8a2cdc692)
-        ;
+        <div role="tabpanel" class="tab-pane" id="nav_${id}">
+          <div class="gm-actions"><b>От хотела:</b><br>${linksFrom(hotelOrigin)}</div>
+          <div class="gm-actions" style="margin-top:6px;">
+            <b>От текущата локация:</b><br>
+            <a href="#" class="dir-cur" data-mode="transit" data-lat="${p.lat}" data-lng="${p.lng}">Transit</a> •
+            <a href="#" class="dir-cur" data-mode="walking" data-lat="${p.lat}" data-lng="${p.lng}">Walk</a> •
+            <a href="#" class="dir-cur" data-mode="driving" data-lat="${p.lat}" data-lng="${p.lng}">Drive</a>
+            <div class="cur-hint" style="font-size:.9em; color:#777; margin-top:4px;">(Натиснете „Намери ме“, ако не е активирано)</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
 
-        
-    
-    
-            var marker_49dc89cb31ae92fe64d1bd6f80c7d6e9 = L.marker(
-                [37.5794, 126.991],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_23bb7f03c153f4d4039988e4e20b9b1e = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "blue", "prefix": "glyphicon"}
-            );
-            marker_49dc89cb31ae92fe64d1bd6f80c7d6e9.setIcon(icon_23bb7f03c153f4d4039988e4e20b9b1e);
-        
-    
-        var popup_6e79a3df6b8355749db79dcea653cb1c = L.popup({"maxWidth": 400});
+  // --- Markers ---
+  const markers = [];
 
-        
-            var html_a685057f8536925893ef93ad48f930cb = $(`<div id="html_a685057f8536925893ef93ad48f930cb" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>Changdeokgung Palace</b><br>       A UNESCO World Heritage site, famous for its Secret Garden, harmoniously blending nature and architecture.<br>       <i>≈ 1.2 km, 15 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5794%2C126.991&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5794%2C126.991&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5794%2C126.991&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           Чандокгун (창덕궁) е дворец от XV в., включен в Списъка на ЮНЕСКО заради хармонията си с природния релеф. Скритата градина Хувон (Secret Garden) се посещава с тур с ограничени места – резервирайте предварително. Много владетели са предпочитали именно този дворец за резиденция.         </div>       </details>     </div>     </div>`)[0];
-            popup_6e79a3df6b8355749db79dcea653cb1c.setContent(html_a685057f8536925893ef93ad48f930cb);
-        
+  // Hotel marker
+  const hotelMarker = L.marker([HOTEL.lat, HOTEL.lng], {icon:hotelIcon}).addTo(map)
+    .bindPopup("<b>"+HOTEL.name+"</b><br>Central Jung District location—walkable to Myeongdong and Insadong.");
+  hotelMarker._category = 'hotel';
+  hotelMarker._isTop = false;
+  markers.push(hotelMarker);
 
-        marker_49dc89cb31ae92fe64d1bd6f80c7d6e9.bindPopup(popup_6e79a3df6b8355749db79dcea653cb1c)
-        ;
+  function addSpot(p){
+    const icon = p.top ? goldIcon : blueIcon;
+    const m = L.marker([p.lat, p.lng], {icon}).addTo(map).bindPopup(popupHTML(p), {maxWidth:420});
+    m._category = p.category; m._isTop = !!p.top;
+    markers.push(m);
+  }
+  top10.forEach(addSpot);
+  others.forEach(addSpot);
 
-        
-    
-    
-            var marker_0eb526939f60dca156a4dcf378d43c75 = L.marker(
-                [37.573, 126.9823],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_788db08736d1421c59395817b709f191 = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "blue", "prefix": "glyphicon"}
-            );
-            marker_0eb526939f60dca156a4dcf378d43c75.setIcon(icon_788db08736d1421c59395817b709f191);
-        
-    
-        var popup_648de584ed0b4d0ef6c3aa4e7cdd723a = L.popup({"maxWidth": 400});
+  // Fit all
+  function fitAllVisible(){
+    const visible = markers.filter(m => map.hasLayer(m));
+    if(!visible.length) return;
+    map.fitBounds(L.featureGroup(visible).getBounds().pad(0.12));
+  }
+  fitAllVisible();
 
-        
-            var html_cfcead313ada76d02027c0a29e255ff3 = $(`<div id="html_cfcead313ada76d02027c0a29e255ff3" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>Jogyesa Temple</b><br>       The chief temple of Korean Buddhism’s Jogye Order, with a 500-year-old tree at its entrance.<br>       <i>≈ 1.2 km, 15 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.573%2C126.9823&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.573%2C126.9823&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.573%2C126.9823&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           Чогеса е главният храм на ордена Чоге (корейският дзен/сон будизъм). Сегашният комплекс е оформен в началото на XX в., но корените му са от 1395 г. По време на фестивала на фенерите за рождения ден на Буда дворът е обсипан с цветни фенери.         </div>       </details>     </div>     </div>`)[0];
-            popup_648de584ed0b4d0ef6c3aa4e7cdd723a.setContent(html_cfcead313ada76d02027c0a29e255ff3);
-        
+  // Filters
+  function applyFilters(){
+    const activeCats = Array.prototype.slice.call(document.querySelectorAll('.catFilter:checked')).map(x=>x.value);
+    const onlyTop = document.getElementById('onlyTop').checked;
+    markers.forEach(m=>{
+      const catOK = activeCats.indexOf(m._category || 'other') !== -1;
+      const topOK = onlyTop ? m._isTop : true;
+      const shouldShow = catOK && topOK;
+      if(shouldShow && !map.hasLayer(m)) m.addTo(map);
+      if(!shouldShow && map.hasLayer(m)) map.removeLayer(m);
+    });
+  }
+  $('.catFilter').on('change', function(){ applyFilters(); });
+  $('#onlyTop').on('change', function(){ applyFilters(); });
 
-        marker_0eb526939f60dca156a4dcf378d43c75.bindPopup(popup_648de584ed0b4d0ef6c3aa4e7cdd723a)
-        ;
+  $('#btnReset').on('click', function(){
+    $('.catFilter').prop('checked', true);
+    $('#onlyTop').prop('checked', false);
+    applyFilters(); fitAllVisible();
+  });
+  document.getElementById('btnFit').addEventListener('click', fitAllVisible);
 
-        
-    
-    
-            var marker_80fa3eefff2dcb9d40537a0cd0f562e9 = L.marker(
-                [37.5512, 126.9882],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_4c50309a5d6878d262a058bd66beb019 = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "blue", "prefix": "glyphicon"}
-            );
-            marker_80fa3eefff2dcb9d40537a0cd0f562e9.setIcon(icon_4c50309a5d6878d262a058bd66beb019);
-        
-    
-        var popup_7ba56796f71f2a74953c837d68316191 = L.popup({"maxWidth": 400});
+  // Collapse / expand
+  function setCollapsed(coll){
+    const panel = document.getElementById('sidePanel');
+    if(coll){
+      panel.classList.add('collapsed');
+      $('#collapseIcon').removeClass('glyphicon-menu-up').addClass('glyphicon-menu-down');
+    }else{
+      panel.classList.remove('collapsed');
+      $('#collapseIcon').removeClass('glyphicon-menu-down').addClass('glyphicon-menu-up');
+      panel.style.top = '10px';
+    }
+  }
+  if(window.matchMedia && window.matchMedia('(max-width:560px)').matches){ setCollapsed(true); }
+  $('#panelHeader').on('click', function(){
+    const isCollapsed = document.getElementById('sidePanel').classList.contains('collapsed');
+    setCollapsed(!isCollapsed);
+  });
 
-        
-            var html_d676605a43dd0182940f1302f005a129 = $(`<div id="html_d676605a43dd0182940f1302f005a129" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>N Seoul Tower</b><br>       Iconic tower on Namsan Mountain, offering panoramic views—famous for the 'Locks of Love' fences.<br>       <i>≈ 2.1 km, 26 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5512%2C126.9882&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5512%2C126.9882&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5512%2C126.9882&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           Кулата N Seoul Tower (YTN Seoul Tower), завършена през 1971 г., е радио‑ и ТВ кула на връх Намсан. Разполага с наблюдателни площадки, въртящ се ресторант и тераси с „катинари на любовта“. До основата се стига с въжена линия или автобус; гледките по залез са най‑впечатляващи.         </div>       </details>     </div>     </div>`)[0];
-            popup_7ba56796f71f2a74953c837d68316191.setContent(html_d676605a43dd0182940f1302f005a129);
-        
+  // Geolocation + dynamic nav links (single declaration of currentDot kept at top)
+  function ensureCurrentLocation(cb){
+    if(currentLoc){ cb(currentLoc); return; }
+    if(!navigator.geolocation){ alert('Geolocation не се поддържа от този браузър.'); return; }
+    navigator.geolocation.getCurrentPosition(function(pos){
+      currentLoc = {lat:pos.coords.latitude, lng:pos.coords.longitude};
+      if(currentDot) map.removeLayer(currentDot);
+      currentDot = L.circleMarker(currentLoc, {radius:8, color:'#111', fillColor:'#00e', fillOpacity:.6}).addTo(map);
+      currentDot.bindPopup('<b>Вашата локация</b>');
+      cb(currentLoc);
+    }, function(err){ alert('Неуспешно засичане на локацията: ' + err.message); }, {enableHighAccuracy:true, timeout:8000, maximumAge:0});
+  }
 
-        marker_80fa3eefff2dcb9d40537a0cd0f562e9.bindPopup(popup_7ba56796f71f2a74953c837d68316191)
-        ;
+  $('#btnLocate').on('click', function(){
+    ensureCurrentLocation(function(loc){
+      map.setView([loc.lat, loc.lng], Math.max(map.getZoom(), 14));
+      if(currentDot) currentDot.openPopup();
+    });
+  });
 
-        
-    
-    
-            var marker_c9d426168f6f15ac17a4a9c910b3b005 = L.marker(
-                [37.5637, 126.982],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_8d596c170bcedc3b6b328d4cd1c19242 = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "info-sign", "iconColor": "white", "markerColor": "blue", "prefix": "glyphicon"}
-            );
-            marker_c9d426168f6f15ac17a4a9c910b3b005.setIcon(icon_8d596c170bcedc3b6b328d4cd1c19242);
-        
-    
-        var popup_1e2df79c4244d60ec3177b3f097ff3a2 = L.popup({"maxWidth": 400});
-
-        
-            var html_63738f1ab17515065e354628bbb0d90c = $(`<div id="html_63738f1ab17515065e354628bbb0d90c" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>Myeongdong</b><br>       Seoul’s most famous shopping district, especially for K-beauty and vibrant street food stalls.<br>       <i>≈ 1.3 km, 16 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5637%2C126.982&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5637%2C126.982&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5637%2C126.982&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           Мьондон е емблематичен търговски квартал с козметика, мода и популярна улична храна. Тук се намират катедралата Мьондон и театърът NANTA; районът е сред най‑скъпите търговски улици в света.         </div>       </details>     </div>     </div>`)[0];
-            popup_1e2df79c4244d60ec3177b3f097ff3a2.setContent(html_63738f1ab17515065e354628bbb0d90c);
-        
-
-        marker_c9d426168f6f15ac17a4a9c910b3b005.bindPopup(popup_1e2df79c4244d60ec3177b3f097ff3a2)
-        ;
-
-        
-    
-    
-            var marker_13b2d5c27a7d9e18bf6228097feb96e4 = L.marker(
-                [37.5663, 127.0095],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_60484b58ec1279d7c956e69be430f9af = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "star", "iconColor": "white", "markerColor": "red", "prefix": "glyphicon"}
-            );
-            marker_13b2d5c27a7d9e18bf6228097feb96e4.setIcon(icon_60484b58ec1279d7c956e69be430f9af);
-        
-    
-        var popup_887ce6c56a330c9aaa11f9aa1a87fc0a = L.popup({"maxWidth": 400});
-
-        
-            var html_47d010d4c780211724fc12ff4b92956e = $(`<div id="html_47d010d4c780211724fc12ff4b92956e" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>Dongdaemun Design Plaza (DDP)</b><br>       Designed by Zaha Hadid, this futuristic landmark is a hub for design exhibitions, fashion shows, and night markets.<br>       <i>≈ 1.3 km, 16 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5663%2C127.0095&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5663%2C127.0095&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5663%2C127.0095&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           DDP (Dongdaemun Design Plaza) е неофутуристичен комплекс по проект на Заха Хадид (открит 2014 г.). Съдържа изложбени зали, модни сцени и покривен парк; част от крепостната стена на Сеул е реставрирана наоколо.         </div>       </details>     </div>     </div>`)[0];
-            popup_887ce6c56a330c9aaa11f9aa1a87fc0a.setContent(html_47d010d4c780211724fc12ff4b92956e);
-        
-
-        marker_13b2d5c27a7d9e18bf6228097feb96e4.bindPopup(popup_887ce6c56a330c9aaa11f9aa1a87fc0a)
-        ;
-
-        
-    
-    
-            var marker_0814fe4128b390b78bae2c6d3281a215 = L.marker(
-                [37.5716, 127.009],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_34181b35bdd223e1a22bf8012ad79f34 = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "star", "iconColor": "white", "markerColor": "red", "prefix": "glyphicon"}
-            );
-            marker_0814fe4128b390b78bae2c6d3281a215.setIcon(icon_34181b35bdd223e1a22bf8012ad79f34);
-        
-    
-        var popup_540c6fc6b005d25190402ac2c829173a = L.popup({"maxWidth": 400});
-
-        
-            var html_4d3d5e6081c7131b0d94650c2a9aba26 = $(`<div id="html_4d3d5e6081c7131b0d94650c2a9aba26" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>Dongdaemun Market</b><br>       A massive shopping district, operating 24/7, selling everything from fabrics to fashion.<br>       <i>≈ 1.2 km, 16 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5716%2C127.009&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5716%2C127.009&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5716%2C127.009&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           Пазарът Донгдемун (осн. 1905 г.) е гигантски търговски район с текстил, готово облекло и нощно пазаруване. Зоната включва десетки търговски центрове и хиляди специализирани магазини.         </div>       </details>     </div>     </div>`)[0];
-            popup_540c6fc6b005d25190402ac2c829173a.setContent(html_4d3d5e6081c7131b0d94650c2a9aba26);
-        
-
-        marker_0814fe4128b390b78bae2c6d3281a215.bindPopup(popup_540c6fc6b005d25190402ac2c829173a)
-        ;
-
-        
-    
-    
-            var marker_b2b1eb3eddcee5ab82466f0f685fc0e8 = L.marker(
-                [37.5126, 127.0586],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_1c2ddf22f2ffff41ca6d006877a9651b = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "star", "iconColor": "white", "markerColor": "red", "prefix": "glyphicon"}
-            );
-            marker_b2b1eb3eddcee5ab82466f0f685fc0e8.setIcon(icon_1c2ddf22f2ffff41ca6d006877a9651b);
-        
-    
-        var popup_176c18db7c005ab49f2fbb9c8c325ec3 = L.popup({"maxWidth": 400});
-
-        
-            var html_be2641a1bfbabb361c32845a52bb91b7 = $(`<div id="html_be2641a1bfbabb361c32845a52bb91b7" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>COEX Mall & Starfield Library</b><br>       Asia’s largest underground mall, featuring the striking open-air Starfield Library.<br>       <i>≈ 8.4 km, 105 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5126%2C127.0586&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5126%2C127.0586&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5126%2C127.0586&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           COEX Mall е един от най‑големите подземни търговски центрове в Азия, свързан с конгресния комплекс COEX. Откритата библиотека Starfield със свръхвисоки рафтове е емблематично фотомясто.         </div>       </details>     </div>     </div>`)[0];
-            popup_176c18db7c005ab49f2fbb9c8c325ec3.setContent(html_be2641a1bfbabb361c32845a52bb91b7);
-        
-
-        marker_b2b1eb3eddcee5ab82466f0f685fc0e8.bindPopup(popup_176c18db7c005ab49f2fbb9c8c325ec3)
-        ;
-
-        
-    
-    
-            var marker_83cc4756ced5a699f03f785729c98c61 = L.marker(
-                [37.5123, 126.996],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_c4b0ed894018856b92ca87d717e73036 = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "star", "iconColor": "white", "markerColor": "red", "prefix": "glyphicon"}
-            );
-            marker_83cc4756ced5a699f03f785729c98c61.setIcon(icon_c4b0ed894018856b92ca87d717e73036);
-        
-    
-        var popup_744fffefa449c7c22dc98ae9f6c7e8bc = L.popup({"maxWidth": 400});
-
-        
-            var html_e6437510fba5853bc7e654504b14243d = $(`<div id="html_e6437510fba5853bc7e654504b14243d" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>Han River Park (Banpo)</b><br>       Popular for biking, picnics, and the Banpo Bridge Rainbow Fountain show at night.<br>       <i>≈ 6.3 km, 79 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5123%2C126.996&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5123%2C126.996&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5123%2C126.996&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           Паркът при мост Банпо (р. Хан) е известен с „Moonlight Rainbow Fountain“ – светлинно‑водно шоу по мостовата конструкция между април и октомври. Място за пикници и колоездене; най‑добро време – вечер.         </div>       </details>     </div>     </div>`)[0];
-            popup_744fffefa449c7c22dc98ae9f6c7e8bc.setContent(html_e6437510fba5853bc7e654504b14243d);
-        
-
-        marker_83cc4756ced5a699f03f785729c98c61.bindPopup(popup_744fffefa449c7c22dc98ae9f6c7e8bc)
-        ;
-
-        
-    
-    
-            var marker_920aaeab7f508d76df5970137571f356 = L.marker(
-                [37.5702, 127.0017],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_780dc1da15078c3bcad00d6af157cb2e = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "star", "iconColor": "white", "markerColor": "red", "prefix": "glyphicon"}
-            );
-            marker_920aaeab7f508d76df5970137571f356.setIcon(icon_780dc1da15078c3bcad00d6af157cb2e);
-        
-    
-        var popup_ddc7ee28c8df3941ad1fd4da5cbe670d = L.popup({"maxWidth": 400});
-
-        
-            var html_655a09bcddced75214e63455300739a5 = $(`<div id="html_655a09bcddced75214e63455300739a5" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>Gwangjang Market</b><br>       Seoul’s oldest traditional market, famous for its mung bean pancakes and bindaetteok.<br>       <i>≈ 0.58 km, 7 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5702%2C127.0017&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5702%2C127.0017&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5702%2C127.0017&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           Куанджан (Гуанджан) е един от най‑старите пазари в Корея (1911 г. като сдружение; хиляди щандове). Опитайте биндетеок (палачинки от боб мунг) и майяк кимбап.         </div>       </details>     </div>     </div>`)[0];
-            popup_ddc7ee28c8df3941ad1fd4da5cbe670d.setContent(html_655a09bcddced75214e63455300739a5);
-        
-
-        marker_920aaeab7f508d76df5970137571f356.bindPopup(popup_ddc7ee28c8df3941ad1fd4da5cbe670d)
-        ;
-
-        
-    
-    
-            var marker_908fc08d73fa64ec4ef763f004b8d204 = L.marker(
-                [37.5572, 126.9236],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_0633a77a41a75e1872c20fff3e18c099 = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "star", "iconColor": "white", "markerColor": "red", "prefix": "glyphicon"}
-            );
-            marker_908fc08d73fa64ec4ef763f004b8d204.setIcon(icon_0633a77a41a75e1872c20fff3e18c099);
-        
-    
-        var popup_c997eab9609640497424888f9fa9dad2 = L.popup({"maxWidth": 400});
-
-        
-            var html_fb123faede90ea38e5f4a276888d20f0 = $(`<div id="html_fb123faede90ea38e5f4a276888d20f0" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>Hongdae</b><br>       Youthful district known for nightlife, street performances, and indie culture.<br>       <i>≈ 6.5 km, 81 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5572%2C126.9236&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5572%2C126.9236&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5572%2C126.9236&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           Хонде (около Университета Hongik) е център на уличното изкуство, индирок сцената и тематичните кафенета. Уикендите има улични изпълнения и базари.         </div>       </details>     </div>     </div>`)[0];
-            popup_c997eab9609640497424888f9fa9dad2.setContent(html_fb123faede90ea38e5f4a276888d20f0);
-        
-
-        marker_908fc08d73fa64ec4ef763f004b8d204.bindPopup(popup_c997eab9609640497424888f9fa9dad2)
-        ;
-
-        
-    
-    
-            var marker_1e949868e851ed42aa7a2818f36d8c49 = L.marker(
-                [37.5345, 126.9946],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_8318177dc7d84200b87f954799576fad = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "star", "iconColor": "white", "markerColor": "red", "prefix": "glyphicon"}
-            );
-            marker_1e949868e851ed42aa7a2818f36d8c49.setIcon(icon_8318177dc7d84200b87f954799576fad);
-        
-    
-        var popup_3ee88d630b439b96d14a0b9c56f04c53 = L.popup({"maxWidth": 400});
-
-        
-            var html_43c7f163ab97707c174b1a9ff84c14e4 = $(`<div id="html_43c7f163ab97707c174b1a9ff84c14e4" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>Itaewon</b><br>       International hotspot offering global cuisine, bars, and diverse nightlife.<br>       <i>≈ 3.9 km, 48 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5345%2C126.9946&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5345%2C126.9946&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5345%2C126.9946&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           Итаевон е международен квартал с ресторанти от цял свят и динамичен нощен живот. Имайте предвид контекста след инцидента от 2022 г.; в пикови периоди следвайте указанията за безопасност.         </div>       </details>     </div>     </div>`)[0];
-            popup_3ee88d630b439b96d14a0b9c56f04c53.setContent(html_43c7f163ab97707c174b1a9ff84c14e4);
-        
-
-        marker_1e949868e851ed42aa7a2818f36d8c49.bindPopup(popup_3ee88d630b439b96d14a0b9c56f04c53)
-        ;
-
-        
-    
-    
-            var marker_fc9299e4ef83f7da39134ed27f4567c7 = L.marker(
-                [37.5696, 126.978],
-                {}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            var icon_06a9c20423a53e90f4154734306b446a = L.AwesomeMarkers.icon(
-                {"extraClasses": "fa-rotate-0", "icon": "tint", "iconColor": "white", "markerColor": "cadetblue", "prefix": "glyphicon"}
-            );
-            marker_fc9299e4ef83f7da39134ed27f4567c7.setIcon(icon_06a9c20423a53e90f4154734306b446a);
-        
-    
-        var popup_812611bad2b938c9c34288b54f4ea35a = L.popup({"maxWidth": 420});
-
-        
-            var html_c454890b088ea51b0534094ec1134cdb = $(`<div id="html_c454890b088ea51b0534094ec1134cdb" style="width: 100.0%; height: 100.0%;">     <div style='min-width:240px;max-width:380px'>       <b>Cheonggyecheon Stream (Canal)</b><br>       Urban stream & linear park through central Seoul; scenic walking paths and night lighting.<br>       <i>≈ 1.5 km, 19 min walk (straight-line)</i><br>       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5696%2C126.978&travelmode=transit" target="_blank">Directions (Transit)</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5696%2C126.978&travelmode=walking" target="_blank">Walking</a> •       <a href="https://www.google.com/maps/dir/?api=1&origin=37.569243%2C126.995227&destination=37.5696%2C126.978&travelmode=driving" target="_blank">Driving</a>       <details style="margin-top:6px">         <summary><b>Още (на български)</b></summary>         <div style="margin-top:4px; font-size: 0.94em; line-height:1.35">           Чьонгечон (청계천) е възстановен градски поток, отворен отново през 2005 г. след мащабен проект по премахване на надземна магистрала. Дълъг е ~10.9 км: започва при Cheonggye Plaza (до Гуангхвамун) и тече на изток към Джуннангчон и р. Хан. Популярен е за разходки, вечерна илюминация, фестивали на фенерите и изкуствени водопади при западното начало. Най‑близки станции: Gwanghwamun, City Hall, Jonggak, Jongno 3‑ga, Euljiro 3/4‑ga, Dongdaemun History & Culture Park.         </div>       </details>     </div>     </div>`)[0];
-            popup_812611bad2b938c9c34288b54f4ea35a.setContent(html_c454890b088ea51b0534094ec1134cdb);
-        
-
-        marker_fc9299e4ef83f7da39134ed27f4567c7.bindPopup(popup_812611bad2b938c9c34288b54f4ea35a)
-        ;
-
-        
-    
-    
-            var poly_line_8d75e77c01f1b4a9d18903da0d429786 = L.polyline(
-                [[37.5695, 126.9772], [37.5697, 126.9825], [37.5696, 126.9878], [37.5695, 126.992], [37.5694, 126.995], [37.5695, 126.999], [37.5697, 127.003], [37.57, 127.0065], [37.5704, 127.0095], [37.5709, 127.015], [37.5712, 127.02], [37.571, 127.03], [37.5708, 127.04], [37.5695, 127.05], [37.568, 127.06], [37.5675, 127.07], [37.567, 127.08], [37.5665, 127.09], [37.566, 127.1], [37.566, 127.11]],
-                {"bubblingMouseEvents": true, "color": "#3A86FF", "dashArray": null, "dashOffset": null, "fill": false, "fillColor": "#3A86FF", "fillOpacity": 0.2, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "noClip": false, "opacity": 0.75, "smoothFactor": 1.0, "stroke": true, "weight": 4}
-            ).addTo(map_11746b04905c5c92ebadbfd1145f2ffb);
-        
-    
-            poly_line_8d75e77c01f1b4a9d18903da0d429786.bindTooltip(
-                `<div>
-                     Cheonggyecheon Stream (approximate path)
-                 </div>`,
-                {"sticky": true}
-            );
-        
-    
-            map_11746b04905c5c92ebadbfd1145f2ffb.fitBounds(
-                [[37.5123, 126.9236], [37.5826, 127.11]],
-                {}
-            );
-        
+  map.on('popupopen', function(e){
+    const container = e.popup.getElement();
+    if(!container) return;
+    $(container).find('.dir-cur').off('click').on('click', function(ev){
+      ev.preventDefault();
+      const mode = this.getAttribute('data-mode');
+      const lat = this.getAttribute('data-lat');
+      const lng = this.getAttribute('data-lng');
+      ensureCurrentLocation(function(loc){
+        const href = gmDirections(loc.lat+','+loc.lng, lat, lng, mode);
+        window.open(href, '_blank');
+      });
+    });
+  });
 </script>
+</body>
 </html>
